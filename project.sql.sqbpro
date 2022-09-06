@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="C:/Users/HP/Downloads/stores.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="175"/><column_width id="3" width="6751"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,8:mainproducts"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="customers" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="217"/><column index="2" value="300"/><column index="3" value="218"/><column index="4" value="221"/><column index="5" value="215"/><column index="6" value="300"/><column index="7" value="252"/><column index="8" value="199"/><column index="9" value="136"/><column index="10" value="142"/><column index="11" value="138"/><column index="12" value="300"/><column index="13" value="140"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="orderdetails" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="170"/><column index="2" value="160"/><column index="3" value="206"/><column index="4" value="126"/><column index="5" value="219"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="orders" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="170"/><column index="2" value="131"/><column index="3" value="167"/><column index="4" value="159"/><column index="5" value="112"/><column index="6" value="300"/><column index="7" value="217"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="payments" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="217"/><column index="3" value="171"/><column index="4" value="118"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="products" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="160"/><column index="2" value="300"/><column index="3" value="184"/><column index="4" value="165"/><column index="5" value="268"/><column index="6" value="300"/><column index="7" value="203"/><column index="8" value="115"/><column index="9" value="82"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1">/* There are 8 tables in total in the database, and they are all connected to each other. Below is a brief description of what each table entail:
+Customers: customer data
+Employees: all employee information
+Offices: sales office information
+Orders: customers' sales orders
+OrderDetails: sales order line for each sales order
+Payments: customers' payment records
+Products: a list of scale model cars
+ProductLines: a list of product line categories */
+
+SELECT 'Customers' AS table_name, 
+       13 AS number_of_attribute,
+       COUNT(*) AS number_of_row
+  FROM Customers
+  
+UNION ALL
+
+SELECT 'Products' AS table_name, 
+       9 AS number_of_attribute,
+       COUNT(*) AS number_of_row
+  FROM Products
+
+UNION ALL
+
+SELECT 'ProductLines' AS table_name, 
+       4 AS number_of_attribute,
+       COUNT(*) AS number_of_row
+  FROM ProductLines
+
+UNION ALL
+
+SELECT 'Orders' AS table_name, 
+       7 AS number_of_attribute,
+       COUNT(*) AS number_of_row
+  FROM Orders
+
+UNION ALL
+
+SELECT 'OrderDetails' AS table_name, 
+       5 AS number_of_attribute,
+       COUNT(*) AS number_of_row
+  FROM OrderDetails
+
+UNION ALL
+
+SELECT 'Payments' AS table_name, 
+       4 AS number_of_attribute,
+       COUNT(*) AS number_of_row
+  FROM Payments
+
+UNION ALL
+
+SELECT 'Employees' AS table_name, 
+       8 AS number_of_attribute,
+       COUNT(*) AS number_of_row
+  FROM Employees
+
+UNION ALL
+
+SELECT 'Offices' AS table_name, 
+       9 AS number_of_attribute,
+       COUNT(*) AS number_of_row
+  FROM Offices;
+  
+-- Question 1: Which products should we order more of or less of?   
+-- Stock Level: gotten by dividing the sum of the quantity ordered by the quantity in stock.
+
+SELECT o.productCode,
+	   p.productName,
+	   SUM(quantityOrdered) AS quantitySold,
+	   p.quantityInStock,
+	   ROUND(SUM(quantityOrdered)* 1.0/p.quantityInStock, 2) AS stockLevel
+  FROM orderdetails o
+  JOIN products p
+	ON o.productCode = p.productCode
+ GROUP BY o.productCode
+ ORDER BY stockLevel;
+ 
+ -- Product performance to know which products sale brings in more profit. 
+ 
+SELECT o.productCode,
+	   p.productName,
+       SUM(quantityOrdered * priceEach) AS productPerformance
+  FROM orderdetails o
+  JOIN products p
+    ON o.productCode = p.productCode
+ GROUP BY o.productCode 
+ ORDER BY productPerformance DESC
+ LIMIT 10;
+ 
+ 
+-- Question 2: How should we match marketing and communication strategies to customer behaviors?
+
+WITH 
+
+money_in_by_customer_table AS (
+SELECT o.customerNumber, SUM(quantityOrdered * (priceEach - buyPrice)) AS revenue
+  FROM products p
+  JOIN orderdetails od
+    ON p.productCode = od.productCode
+  JOIN orders o
+    ON o.orderNumber = od.orderNumber
+ GROUP BY o.customerNumber
+)
+
+SELECT contactLastName, contactFirstName, city, country, mc.revenue
+  FROM customers c
+  JOIN money_in_by_customer_table mc
+    ON mc.customerNumber = c.customerNumber
+ ORDER BY mc.revenue DESC
+ LIMIT 5;
+ 
+-- Question 3: How Much Can We Spend on Acquiring New Customers? 
+ 
+ WITH 
+
+payment_with_year_month_table AS (
+SELECT *, 
+       CAST(SUBSTR(paymentDate, 1,4) AS INTEGER)*100 + CAST(SUBSTR(paymentDate, 6,7) AS INTEGER) AS year_month
+  FROM payments p
+),
+
+customers_by_month_table AS (
+SELECT p1.year_month, COUNT(*) AS number_of_customers, SUM(p1.amount) AS total
+  FROM payment_with_year_month_table p1
+ GROUP BY p1.year_month
+),
+
+new_customers_by_month_table AS (
+SELECT p1.year_month, 
+       COUNT(*) AS number_of_new_customers,
+       SUM(p1.amount) AS new_customer_total,
+       (SELECT number_of_customers
+          FROM customers_by_month_table c
+        WHERE c.year_month = p1.year_month) AS number_of_customers,
+       (SELECT total
+          FROM customers_by_month_table c
+         WHERE c.year_month = p1.year_month) AS total
+  FROM payment_with_year_month_table p1
+ WHERE p1.customerNumber NOT IN (SELECT customerNumber
+                                   FROM payment_with_year_month_table p2
+                                  WHERE p2.year_month &lt; p1.year_month)
+ GROUP BY p1.year_month
+)
+
+SELECT year_month, 
+       ROUND(number_of_new_customers*100/number_of_customers,1) AS number_of_new_customers_props,
+       ROUND(new_customer_total*100/total,1) AS new_customers_total_props
+  FROM new_customers_by_month_table;
+  
+  
+WITH 
+
+money_in_by_customer_table AS (
+SELECT o.customerNumber, SUM(quantityOrdered * (priceEach - buyPrice)) AS revenue
+  FROM products p
+  JOIN orderdetails od
+    ON p.productCode = od.productCode
+  JOIN orders o
+    ON o.orderNumber = od.orderNumber
+ GROUP BY o.customerNumber
+)
+
+SELECT AVG(mc.revenue) AS ltv
+  FROM money_in_by_customer_table mc;</sql><current_tab id="0"/></tab_sql></sqlb_project>
